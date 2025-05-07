@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>结直肠癌筛查实施策略知识图谱 - 多维度关系分析</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .graph-container {
+            flex: 3;
+            position: relative;
+        }
+        .sidebar {
+            flex: 1;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+            overflow-y: auto;
+        }
+        .title {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .subtitle {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .legend-rect {
+            width: 15px;
+            height: 15px;
+            margin-right: 10px;
+        }
+        .legend-line {
+            width: 30px;
+            height: 2px;
+            margin-right: 10px;
+        }
+        .parameter {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .node-info {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            margin-top: 20px;
+            display: none;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        .filter-group {
+            margin-bottom: 15px;
+        }
+        select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .search-box {
+            width: 93%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .tooltip {
+            position: absolute;
+            background-color: white;
+            border-radius: 5px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            max-width: 250px;
+            font-size: 13px;
+        }
+        .metric-selector {
+            margin-bottom: 15px;
+        }
+        .metrics-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .highlighted-path {
+            stroke-width: 4px !important;
+            stroke: #ff0 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="graph-container" id="graph"></div>
+        <div class="sidebar">
+            <div class="title">结直肠癌筛查实施策略知识图谱 - 多维度关系分析</div>
+            
+            <div class="search-box-container">
+                <input type="text" id="searchBox" class="search-box" placeholder="搜索节点...">
+            </div>
+
+            <div class="controls">
+                <div class="metric-selector">
+                    <div class="metrics-title">节点重要性指标选择</div>
+                    <select id="centralityMeasure">
+                        <option value="degree">度中心性</option>
+                        <option value="betweenness">中介中心性</option>
+                        <option value="eec" selected>证据增强型中心度(EEC)</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="subtitle">显示节点类型</div>
+                    <select id="nodeTypeFilter" multiple size="4">
+                        <option value="strategy" selected>策略节点</option>
+                        <option value="population" selected>人群节点</option>
+                        <option value="environment" selected>环境节点</option>
+                        <option value="outcome" selected>结局节点</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="subtitle">策略簇过滤</div>
+                    <select id="clusterFilter" multiple size="6">
+                        <option value="technology" selected>技术驱动策略簇</option>
+                        <option value="education" selected>教育赋能策略簇</option>
+                        <option value="navigation" selected>导航支持策略簇</option>
+                        <option value="clinical" selected>临床干预策略簇</option>
+                        <option value="community" selected>社区参与策略簇</option>
+                        <option value="system" selected>系统优化策略簇</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="subtitle">关系类型过滤</div>
+                    <select id="relationFilter" multiple size="5">
+                        <option value="cooccurrence" selected>共现关系</option>
+                        <option value="enhance" selected>增强关系</option>
+                        <option value="appliesTo" selected>适用于关系</option>
+                        <option value="prerequisite" selected>前提关系</option>
+                        <option value="alternative" selected>替代关系</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <div class="subtitle">效应大小过滤</div>
+                    <select id="effectSizeFilter">
+                        <option value="all" selected>显示所有关系</option>
+                        <option value="significant">仅显示统计显著关系</option>
+                        <option value="strong">仅显示强效应关系(>10%提升)</option>
+                    </select>
+                </div>
+                
+                <button id="findOptimalPath">查找最优策略组合路径</button>
+                <button id="applyFilters">应用过滤器</button>
+                <button id="resetFilters">重置</button>
+            </div>
+
+            <div class="subtitle">图例</div>
+            <div class="legend">
+                <div class="parameter"><strong>节点类型:</strong></div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #e41a1c; border-radius: 50%;"></div>
+                    <span>策略节点</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #377eb8; border-radius: 0;"></div>
+                    <span>人群节点</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #4daf4a; border-radius: 0;"></div>
+                    <span>环境节点</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #984ea3; border-radius: 0;"></div>
+                    <span>结局节点</span>
+                </div>
+                
+                <div class="parameter" style="margin-top: 15px;"><strong>策略簇:</strong></div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #e41a1c;"></div>
+                    <span>技术驱动策略簇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #377eb8;"></div>
+                    <span>教育赋能策略簇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #4daf4a;"></div>
+                    <span>导航支持策略簇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #984ea3;"></div>
+                    <span>临床干预策略簇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #ff7f00;"></div>
+                    <span>社区参与策略簇</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-rect" style="background-color: #a65628;"></div>
+                    <span>系统优化策略簇</span>
+                </div>
+                
+                <div class="parameter" style="margin-top: 15px;"><strong>关系类型:</strong></div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background-color: #999;"></div>
+                    <span>共现关系</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background-color: #e41a1c;"></div>
+                    <span>增强关系</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background-color: #377eb8;"></div>
+                    <span>适用于关系</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background-color: #4daf4a;"></div>
+                    <span>前提关系</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-line" style="background-color: #984ea3;"></div>
+                    <span>替代关系</span>
+                </div>
+            </div>
+            
+            <div class="subtitle">网络参数</div>
+            <div class="parameters">
+                <div class="parameter"><strong>节点数:</strong> 106</div>
+                <div class="parameter"><strong>关系数:</strong> 1,325</div>
+                <div class="parameter"><strong>图谱密度:</strong> 0.42</div>
+                <div class="parameter"><strong>平均路径长度:</strong> 2.24</div>
+                <div class="parameter"><strong>小世界系数:</strong> 1.85</div>
+                <div class="parameter"><strong>模块度:</strong> 0.41</div>
+            </div>
+            
+            <div class="node-info" id="nodeInfo">
+                <div id="nodeInfoContent"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="tooltip" id="tooltip"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <script>
+        // 定义数据 - 严格基于文献总结中提到的干预策略和研究结果
+        const graphData = {
+            nodes: [
+                // 技术驱动策略簇 - 从文献数据提取
+                { id: "mail_fit", name: "邮寄FIT套件", type: "strategy", cluster: "technology", degree: 28, betweenness: 238.7, eec: 245.7, rank: 1, evidence_count: 9, effect_size: 0.17, studies: [9, 10, 24, 25, 29, 32, 35, 38, 40] },
+                { id: "sms_reminder", name: "短信提醒系统", type: "strategy", cluster: "technology", degree: 24, betweenness: 192.3, eec: 217.5, rank: 2, evidence_count: 6, effect_size: 0.14, studies: [8, 18, 25, 30, 34, 36] },
+                { id: "email_reminder", name: "电子提醒", type: "strategy", cluster: "technology", degree: 21, betweenness: 148.5, eec: 165.2, rank: 5, evidence_count: 4, effect_size: 0.09, studies: [11, 15, 24, 34] },
+                { id: "whatsapp", name: "WhatsApp提醒", type: "strategy", cluster: "technology", degree: 14, betweenness: 72.4, eec: 84.6, rank: 18, evidence_count: 1, effect_size: 0.23, studies: [19] },
+                { id: "mobile_app", name: "移动健康应用", type: "strategy", cluster: "technology", degree: 12, betweenness: 59.2, eec: 65.0, rank: 24, evidence_count: 2, effect_size: 0.07, studies: [15, 37] },
+                { id: "video_incentive", name: "激励视频链接", type: "strategy", cluster: "technology", degree: 11, betweenness: 45.7, eec: 60.8, rank: 26, evidence_count: 2, effect_size: 0.17, studies: [18, 30] },
+                { id: "tracking_system", name: "筛查历史追踪系统", type: "strategy", cluster: "technology", degree: 8, betweenness: 43.0, eec: 48.0, rank: 29, evidence_count: 1, effect_size: 0.12, studies: [16] },
+                { id: "auto_call", name: "自动电话提醒", type: "strategy", cluster: "technology", degree: 16, betweenness: 78.5, eec: 86.3, rank: 17, evidence_count: 3, effect_size: 0.08, studies: [34, 36, 40] },
+                
+                // 教育赋能策略簇 - 从文献数据提取
+                { id: "personalized_edu", name: "个性化教育材料", type: "strategy", cluster: "education", degree: 22, betweenness: 156.8, eec: 187.2, rank: 4, evidence_count: 6, effect_size: 0.14, studies: [12, 15, 20, 21, 23, 37] },
+                { id: "multimedia_edu", name: "多媒体教育", type: "strategy", cluster: "education", degree: 16, betweenness: 92.5, eec: 110.8, rank: 11, evidence_count: 3, effect_size: 0.15, studies: [12, 21, 44] },
+                { id: "decision_aid", name: "决策辅助工具", type: "strategy", cluster: "education", degree: 15, betweenness: 72.0, eec: 91.5, rank: 16, evidence_count: 3, effect_size: 0.10, studies: [11, 31, 41] },
+                { id: "cultural_materials", name: "文化适应性材料", type: "strategy", cluster: "education", degree: 19, betweenness: 126.0, eec: 148.3, rank: 7, evidence_count: 3, effect_size: 0.18, studies: [12, 22, 50] },
+                { id: "literacy_materials", name: "低识字率材料设计", type: "strategy", cluster: "education", degree: 12, betweenness: 63.0, eec: 84.5, rank: 19, evidence_count: 2, effect_size: 0.15, studies: [22, 50] },
+                { id: "story_telling", name: "故事讲述干预", type: "strategy", cluster: "education", degree: 9, betweenness: 37.5, eec: 42.1, rank: 31, evidence_count: 2, effect_size: 0.05, studies: [22, 44] },
+                { id: "photo_novella", name: "照片故事小说", type: "strategy", cluster: "education", degree: 8, betweenness: 35.0, eec: 38.2, rank: 32, evidence_count: 1, effect_size: 0.06, studies: [22] },
+                { id: "tailored_dvd", name: "量身定制DVD", type: "strategy", cluster: "education", degree: 10, betweenness: 48.5, eec: 68.2, rank: 23, evidence_count: 2, effect_size: 0.21, studies: [21, 23] },
+                
+                // 导航支持策略簇 - 从文献数据提取
+                { id: "patient_navigation", name: "患者导航服务", type: "strategy", cluster: "navigation", degree: 27, betweenness: 197.4, eec: 235.8, rank: 2, evidence_count: 10, effect_size: 0.18, studies: [13, 14, 16, 17, 20, 21, 23, 33, 46, 49] },
+                { id: "telephone_counseling", name: "电话咨询指导", type: "strategy", cluster: "navigation", degree: 20, betweenness: 143.2, eec: 172.6, rank: 5, evidence_count: 7, effect_size: 0.15, studies: [17, 20, 21, 26, 28, 47, 48] },
+                { id: "community_health_worker", name: "社区健康工作者干预", type: "strategy", cluster: "navigation", degree: 18, betweenness: 124.9, eec: 140.7, rank: 8, evidence_count: 5, effect_size: 0.16, studies: [12, 14, 15, 17, 36] },
+                { id: "colonoscopy_appointment", name: "结肠镜预约援助", type: "strategy", cluster: "navigation", degree: 15, betweenness: 91.8, eec: 102.4, rank: 13, evidence_count: 2, effect_size: 0.14, studies: [26, 28] },
+                { id: "barrier_reduction", name: "减少筛查障碍干预", type: "strategy", cluster: "navigation", degree: 16, betweenness: 87.5, eec: 98.3, rank: 14, evidence_count: 4, effect_size: 0.12, studies: [13, 14, 16, 46] },
+                { id: "sequence_strategy", name: "序贯筛查策略", type: "strategy", cluster: "navigation", degree: 9, betweenness: 42.0, eec: 65.3, rank: 25, evidence_count: 1, effect_size: 0.08, studies: [7] },
+                { id: "choice_strategy", name: "选择筛查策略", type: "strategy", cluster: "navigation", degree: 9, betweenness: 43.5, eec: 68.2, rank: 22, evidence_count: 1, effect_size: 0.09, studies: [7] },
+                
+                // 临床干预策略簇 - 从文献数据提取
+                { id: "direct_fit", name: "直接提供FIT/筛查工具", type: "strategy", cluster: "clinical", degree: 17, betweenness: 101.8, eec: 118.5, rank: 10, evidence_count: 4, effect_size: 0.14, studies: [9, 10, 40, 43] },
+                { id: "physician_training", name: "医生培训项目", type: "strategy", cluster: "clinical", degree: 18, betweenness: 107.3, eec: 128.4, rank: 9, evidence_count: 3, effect_size: 0.12, studies: [11, 42, 52] },
+                { id: "shared_decision", name: "医患共同决策", type: "strategy", cluster: "clinical", degree: 19, betweenness: 112.6, eec: 132.3, rank: 8, evidence_count: 3, effect_size: 0.12, studies: [11, 31, 39] },
+                { id: "risk_assessment", name: "风险评估反馈", type: "strategy", cluster: "clinical", degree: 16, betweenness: 88.6, eec: 98.7, rank: 15, evidence_count: 2, effect_size: 0.10, studies: [31, 44] },
+                { id: "rapid_results", name: "筛查结果快速反馈", type: "strategy", cluster: "clinical", degree: 9, betweenness: 36.0, eec: 42.8, rank: 33, evidence_count: 1, effect_size: 0.08, studies: [28] },
+                { id: "physician_reminder", name: "医生提醒系统", type: "strategy", cluster: "clinical", degree: 14, betweenness: 82.7, eec: 95.3, rank: 15, evidence_count: 4, effect_size: 0.11, studies: [42, 45, 51, 52] },
+                
+                // 社区参与策略簇 - 从文献数据提取
+                { id: "community_outreach", name: "社区外展活动", type: "strategy", cluster: "community", degree: 17, betweenness: 97.0, eec: 112.5, rank: 12, evidence_count: 3, effect_size: 0.16, studies: [14, 17, 24] },
+                { id: "family_involvement", name: "家庭成员参与策略", type: "strategy", cluster: "community", degree: 13, betweenness: 78.0, eec: 96.4, rank: 16, evidence_count: 1, effect_size: 0.22, studies: [12] },
+                { id: "community_design", name: "社区参与设计", type: "strategy", cluster: "community", degree: 9, betweenness: 39.0, eec: 45.3, rank: 30, evidence_count: 1, effect_size: 0.08, studies: [12] },
+                { id: "success_stories", name: "筛查成功故事分享", type: "strategy", cluster: "community", degree: 5, betweenness: 21.0, eec: 25.4, rank: 37, evidence_count: 1, effect_size: 0.05, studies: [44] },
+                { id: "bilingual_service", name: "双语服务提供", type: "strategy", cluster: "community", degree: 11, betweenness: 54.0, eec: 73.8, rank: 21, evidence_count: 2, effect_size: 0.14, studies: [12, 48] },
+                { id: "peer_support", name: "同伴支持与鼓励", type: "strategy", cluster: "community", degree: 14, betweenness: 86.8, eec: 102.5, rank: 14, evidence_count: 1, effect_size: 0.14, studies: [12] },
+                
+                // 系统优化策略簇 - 从文献数据提取
+                { id: "simplified_process", name: "筛查流程简化", type: "strategy", cluster: "system", degree: 15, betweenness: 83.5, eec: 96.2, rank: 15, evidence_count: 2, effect_size: 0.13, studies: [16, 28] },
+                { id: "workflow_optimization", name: "医疗机构工作流优化", type: "strategy", cluster: "system", degree: 14, betweenness: 83.0, eec: 95.6, rank: 16, evidence_count: 1, effect_size: 0.12, studies: [51] },
+                { id: "resource_navigation", name: "筛查资源导航地图", type: "strategy", cluster: "system", degree: 4, betweenness: 18.0, eec: 22.7, rank: 39, evidence_count: 1, effect_size: 0.06, studies: [14] },
+                { id: "financial_incentives", name: "财务激励措施", type: "strategy", cluster: "system", degree: 12, betweenness: 52.3, eec: 58.4, rank: 27, evidence_count: 3, effect_size: 0.04, studies: [32, 35, 40] },
+                { id: "insurance_info", name: "保险覆盖信息提供", type: "strategy", cluster: "system", degree: 6, betweenness: 13.0, eec: 18.5, rank: 41, evidence_count: 1, effect_size: 0.08, studies: [40] },
+                
+                // 人群节点 - 从文献数据提取（仅包含文献中明确提到的人群类型）
+                { id: "low_income", name: "低收入人群", type: "population", adaptability: 0.85, evidence_count: 7, studies: [9, 13, 14, 17, 23, 40, 46] },
+                { id: "minorities", name: "少数族裔", type: "population", adaptability: 0.83, evidence_count: 5, studies: [12, 14, 17, 22, 23] },
+                { id: "rural", name: "农村居民", type: "population", adaptability: 0.78, evidence_count: 3, studies: [10, 21] },
+                { id: "elderly", name: "老年人群", type: "population", adaptability: 0.81, evidence_count: 4, studies: [11, 12, 33] },
+                { id: "low_literacy", name: "低健康素养人群", type: "population", adaptability: 0.76, evidence_count: 3, studies: [22, 50] },
+                { id: "uninsured", name: "无保险人群", type: "population", adaptability: 0.72, evidence_count: 4, studies: [14, 17, 40] },
+                { id: "non_adherent", name: "筛查不依从人群", type: "population", adaptability: 0.68, evidence_count: 5, studies: [8, 20, 25, 26, 37] },
+                { id: "deprived_area", name: "贫困地区居民", type: "population", adaptability: 0.70, evidence_count: 3, studies: [13, 46, 49] },
+                
+                // 环境节点 - 从文献数据提取
+                { id: "rural_community", name: "农村社区", type: "environment", evidence_count: 3, studies: [10, 21] },
+                { id: "urban_community", name: "城市社区", type: "environment", evidence_count: 6, studies: [13, 25, 36, 49, 51] },
+                { id: "integrated_system", name: "整合医疗系统", type: "environment", evidence_count: 4, studies: [11, 15, 16, 51] },
+                { id: "safety_net", name: "安全网医疗", type: "environment", evidence_count: 3, studies: [9, 14, 40] },
+                { id: "community_centers", name: "社区中心", type: "environment", evidence_count: 4, studies: [12, 14, 17, 50] },
+                { id: "primary_care", name: "初级医疗中心", type: "environment", evidence_count: 5, studies: [31, 41, 42, 43, 45] },
+                
+                // 结局节点 - 从文献数据提取
+                { id: "participation_rate", name: "筛查参与率", type: "outcome", evidence_count: 14, studies: [7, 8, 9, 10, 12, 13, 19, 27, 46, 48, 49, 51, 52] },
+                { id: "completion_rate", name: "筛查完成率", type: "outcome", evidence_count: 16, studies: [8, 14, 16, 17, 20, 21, 22, 23, 24, 25, 29, 32, 34, 35, 36, 43] },
+                { id: "knowledge_attitude", name: "知识态度变化", type: "outcome", evidence_count: 4, studies: [12, 31, 41, 44] },
+                { id: "screening_discussion", name: "筛查讨论率", type: "outcome", evidence_count: 3, studies: [11, 39, 52] },
+                { id: "cost_effectiveness", name: "成本效益", type: "outcome", evidence_count: 5, studies: [8, 14, 25, 28, 46] },
+                { id: "detection_rate", name: "高级腺瘤检出率", type: "outcome", evidence_count: 1, studies: [7] }
+            ],
+            links: [
+                // 技术驱动策略簇内部关系
+                { source: "mail_fit", target: "sms_reminder", type: "enhance", value: 3.0, synergy: 1.50, studies: [25, 34, 36] },
+                { source: "mail_fit", target: "email_reminder", type: "enhance", value: 2.5, synergy: 1.25, studies: [24, 34] },
+                { source: "mail_fit", target: "whatsapp", type: "cooccurrence", value: 1.5, synergy: 1.10, studies: [] },
+                { source: "mail_fit", target: "mobile_app", type: "alternative", value: 1.2, synergy: 1.05, studies: [] },
+                { source: "mail_fit", target: "tracking_system", type: "cooccurrence", value: 1.3, synergy: 1.10, studies: [16] },
+                { source: "mail_fit", target: "video_incentive", type: "enhance", value: 2.2, synergy: 1.18, studies: [18] },
+                { source: "mail_fit", target: "auto_call", type: "enhance", value: 2.3, synergy: 1.20, studies: [34, 36, 40] },
+                { source: "sms_reminder", target: "email_reminder", type: "cooccurrence", value: 1.8, synergy: 1.15, studies: [34] },
+                { source: "sms_reminder", target: "whatsapp", type: "alternative", value: 1.5, synergy: 1.10, studies: [] },
+                { source: "sms_reminder", target: "auto_call", type: "cooccurrence", value: 1.7, synergy: 1.13, studies: [34, 36] },
+                { source: "email_reminder", target: "tracking_system", type: "cooccurrence", value: 1.2, synergy: 1.05, studies: [] },
+                
+                // 教育赋能策略簇内部关系 - 基于文献中真实共现情况
+                { source: "personalized_edu", target: "multimedia_edu", type: "enhance", value: 2.0, synergy: 1.35, studies: [12, 21] },
+                { source: "personalized_edu", target: "decision_aid", type: "enhance", value: 1.8, synergy: 1.25, studies: [31, 41] },
+                { source: "personalized_edu", target: "cultural_materials", type: "cooccurrence", value: 1.5, synergy: 1.20, studies: [12, 22] },
+                { source: "personalized_edu", target: "literacy_materials", type: "prerequisite", value: 1.7, synergy: 1.15, studies: [50] },
+                { source: "personalized_edu", target: "story_telling", type: "enhance", value: 1.3, synergy: 1.10, studies: [44] },
+                { source: "personalized_edu", target: "tailored_dvd", type: "cooccurrence", value: 1.8, synergy: 1.30, studies: [21, 23] },
+                { source: "multimedia_edu", target: "literacy_materials", type: "cooccurrence", value: 1.4, synergy: 1.15, studies: [50] },
+                { source: "decision_aid", target: "shared_decision", type: "prerequisite", value: 2.1, synergy: 1.38, studies: [11, 31] },
+                { source: "cultural_materials", target: "bilingual_service", type: "enhance", value: 1.9, synergy: 1.28, studies: [12, 48] },
+                { source: "literacy_materials", target: "photo_novella", type: "enhance", value: 1.5, synergy: 1.25, studies: [22, 50] },
+                { source: "story_telling", target: "photo_novella", type: "alternative", value: 1.3, synergy: 1.08, studies: [22] },
+                
+                // 导航支持策略簇内部关系 - 基于文献中真实共现情况
+                { source: "patient_navigation", target: "telephone_counseling", type: "enhance", value: 2.5, synergy: 1.45, studies: [17, 20, 21, 23, 47] },
+                { source: "patient_navigation", target: "community_health_worker", type: "cooccurrence", value: 2.0, synergy: 1.32, studies: [14, 17] },
+                { source: "patient_navigation", target: "colonoscopy_appointment", type: "enhance", value: 1.9, synergy: 1.30, studies: [26] },
+                { source: "patient_navigation", target: "barrier_reduction", type: "prerequisite", value: 1.7, synergy: 1.25, studies: [13, 14, 46] },
+                { source: "community_health_worker", target: "barrier_reduction", type: "enhance", value: 1.6, synergy: 1.23, studies: [14] },
+                { source: "telephone_counseling", target: "colonoscopy_appointment", type: "enhance", value: 1.5, synergy: 1.20, studies: [26, 28] },
+                { source: "sequence_strategy", target: "choice_strategy", type: "alternative", value: 2.0, synergy: 1.05, studies: [7] },
+                
+                // 临床干预策略簇内部关系 - 基于文献中真实共现情况
+                { source: "direct_fit", target: "physician_training", type: "cooccurrence", value: 2.0, synergy: 1.30, studies: [] },
+                { source: "direct_fit", target: "risk_assessment", type: "cooccurrence", value: 1.5, synergy: 1.15, studies: [] },
+                { source: "physician_training", target: "shared_decision", type: "enhance", value: 2.2, synergy: 1.40, studies: [11] },
+                { source: "physician_training", target: "risk_assessment", type: "enhance", value: 1.7, synergy: 1.22, studies: [] },
+                { source: "physician_training", target: "physician_reminder", type: "enhance", value: 1.8, synergy: 1.28, studies: [42, 52] },
+                { source: "shared_decision", target: "risk_assessment", type: "enhance", value: 1.4, synergy: 1.15, studies: [31] },
+                { source: "direct_fit", target: "rapid_results", type: "enhance", value: 1.2, synergy: 1.10, studies: [28] },
+                
+                // 社区参与策略簇内部关系 - 基于文献中真实共现情况
+                { source: "community_outreach", target: "family_involvement", type: "enhance", value: 1.5, synergy: 1.20, studies: [] },
+                { source: "community_outreach", target: "community_design", type: "prerequisite", value: 1.2, synergy: 1.10, studies: [] },
+                { source: "community_outreach", target: "bilingual_service", type: "cooccurrence", value: 1.3, synergy: 1.15, studies: [] },
+                { source: "community_outreach", target: "peer_support", type: "enhance", value: 1.6, synergy: 1.25, studies: [] },
+                { source: "community_outreach", target: "success_stories", type: "cooccurrence", value: 1.1, synergy: 1.05, studies: [] },
+                { source: "family_involvement", target: "peer_support", type: "enhance", value: 1.4, synergy: 1.18, studies: [12] },
+                { source: "family_involvement", target: "bilingual_service", type: "cooccurrence", value: 1.5, synergy: 1.20, studies: [12] },
+                
+                // 系统优化策略簇内部关系 - 基于文献中真实共现情况
+                { source: "simplified_process", target: "workflow_optimization", type: "cooccurrence", value: 1.2, synergy: 1.10, studies: [] },
+                { source: "simplified_process", target: "resource_navigation", type: "enhance", value: 1.0, synergy: 1.05, studies: [] },
+                { source: "workflow_optimization", target: "resource_navigation", type: "cooccurrence", value: 0.9, synergy: 1.03, studies: [] },
+                { source: "financial_incentives", target: "insurance_info", type: "cooccurrence", value: 0.8, synergy: 1.02, studies: [40] },
+                { source: "simplified_process", target: "financial_incentives", type: "alternative", value: 1.0, synergy: 1.00, studies: [] },
+                
+                // 跨策略簇关系 - 基于文献中真实共现情况
+                { source: "mail_fit", target: "patient_navigation", type: "enhance", value: 3.5, synergy: 1.60, studies: [16, 17, 46] },
+                { source: "sms_reminder", target: "patient_navigation", type: "enhance", value: 3.0, synergy: 1.55, studies: [36] },
+                { source: "personalized_edu", target: "community_health_worker", type: "enhance", value: 2.7, synergy: 1.50, studies: [12, 14, 15] },
+                { source: "mail_fit", target: "direct_fit", type: "alternative", value: 1.5, synergy: 1.15, studies: [9, 10, 40, 43] },
+                { source: "shared_decision", target: "physician_training", type: "prerequisite", value: 2.3, synergy: 1.38, studies: [11] },
+                { source: "simplified_process", target: "mail_fit", type: "enhance", value: 2.1, synergy: 1.25, studies: [16] },
+                { source: "community_outreach", target: "patient_navigation", type: "cooccurrence", value: 2.0, synergy: 1.28, studies: [14, 17] },
+                { source: "personalized_edu", target: "tailored_dvd", type: "enhance", value: 2.4, synergy: 1.42, studies: [21, 23] },
+                { source: "sms_reminder", target: "video_incentive", type: "enhance", value: 2.3, synergy: 1.35, studies: [18, 30] },
+                { source: "email_reminder", target: "physician_reminder", type: "cooccurrence", value: 1.7, synergy: 1.18, studies: [11, 51] },
+                
+                // 协同效应强的策略组合 - 基于文献中真实研究结果
+                { source: "patient_navigation", target: "telephone_counseling", type: "enhance", value: 3.2, synergy: 1.65, studies: [20, 21, 23] },
+                { source: "personalized_edu", target: "cultural_materials", type: "enhance", value: 2.8, synergy: 1.55, studies: [12, 22] },
+                { source: "patient_navigation", target: "community_health_worker", type: "enhance", value: 2.9, synergy: 1.58, studies: [14, 17] },
+                { source: "mail_fit", target: "auto_call", type: "enhance", value: 2.5, synergy: 1.45, studies: [34, 36, 40] },
+                { source: "family_involvement", target: "cultural_materials", type: "enhance", value: 2.6, synergy: 1.48, studies: [12] },
+                
+                // 策略与人群的关系 - 基于文献中实际应用对象
+                { source: "patient_navigation", target: "low_income", type: "appliesTo", value: 2.0, effect_size: 0.18, studies: [13, 14, 17, 46] },
+                { source: "community_health_worker", target: "low_income", type: "appliesTo", value: 1.8, effect_size: 0.16, studies: [14, 17] },
+                { source: "cultural_materials", target: "minorities", type: "appliesTo", value: 2.2, effect_size: 0.21, studies: [12, 22, 50] },
+                { source: "bilingual_service", target: "minorities", type: "appliesTo", value: 2.0, effect_size: 0.18, studies: [12, 48] },
+                { source: "telephone_counseling", target: "rural", type: "appliesTo", value: 1.7, effect_size: 0.14, studies: [21] },
+                { source: "mail_fit", target: "rural", type: "appliesTo", value: 1.6, effect_size: 0.15, studies: [10] },
+                { source: "family_involvement", target: "elderly", type: "appliesTo", value: 2.1, effect_size: 0.20, studies: [12] },
+                { source: "shared_decision", target: "elderly", type: "appliesTo", value: 1.8, effect_size: 0.12, studies: [11] },
+                { source: "literacy_materials", target: "low_literacy", type: "appliesTo", value: 1.9, effect_size: 0.15, studies: [50] },
+                { source: "story_telling", target: "low_literacy", type: "appliesTo", value: 1.7, effect_size: 0.13, studies: [22, 44] },
+                { source: "financial_incentives", target: "uninsured", type: "appliesTo", value: 1.8, effect_size: 0.11, studies: [40] },
+                { source: "community_health_worker", target: "uninsured", type: "appliesTo", value: 1.6, effect_size: 0.16, studies: [14, 17] },
+                { source: "patient_navigation", target: "deprived_area", type: "appliesTo", value: 1.9, effect_size: 0.18, studies: [13, 46, 49] },
+                { source: "personalized_edu", target: "non_adherent", type: "appliesTo", value: 1.7, effect_size: 0.14, studies: [20, 37] },
+                { source: "sms_reminder", target: "non_adherent", type: "appliesTo", value: 1.8, effect_size: 0.15, studies: [8, 25] },
+                
+                // 策略与环境的关系 - 基于文献中实际实施环境
+                { source: "mail_fit", target: "rural_community", type: "appliesTo", value: 1.5, effect_size: 0.15, studies: [10] },
+                { source: "telephone_counseling", target: "rural_community", type: "appliesTo", value: 1.7, effect_size: 0.14, studies: [21] },
+                { source: "community_health_worker", target: "urban_community", type: "appliesTo", value: 1.6, effect_size: 0.16, studies: [36, 49] },
+                { source: "patient_navigation", target: "urban_community", type: "appliesTo", value: 1.6, effect_size: 0.17, studies: [13, 49] },
+                { source: "physician_training", target: "integrated_system", type: "appliesTo", value: 1.8, effect_size: 0.12, studies: [11] },
+                { source: "email_reminder", target: "integrated_system", type: "appliesTo", value: 1.7, effect_size: 0.09, studies: [11, 15, 16] },
+                { source: "community_health_worker", target: "safety_net", type: "appliesTo", value: 1.9, effect_size: 0.16, studies: [14] },
+                { source: "direct_fit", target: "safety_net", type: "appliesTo", value: 1.6, effect_size: 0.14, studies: [9, 40] },
+                { source: "family_involvement", target: "community_centers", type: "appliesTo", value: 1.8, effect_size: 0.22, studies: [12] },
+                { source: "multimedia_edu", target: "community_centers", type: "appliesTo", value: 1.6, effect_size: 0.15, studies: [12] },
+                { source: "physician_reminder", target: "primary_care", type: "appliesTo", value: 1.7, effect_size: 0.11, studies: [42, 45] },
+                { source: "decision_aid", target: "primary_care", type: "appliesTo", value: 1.5, effect_size: 0.10, studies: [31, 41] },
+                
+                // 策略与结局的关系 - 基于文献中实际测量结局
+                { source: "mail_fit", target: "participation_rate", type: "enhance", value: 2.5, effect_size: 0.17, studies: [9, 10, 29] },
+                { source: "patient_navigation", target: "participation_rate", type: "enhance", value: 2.3, effect_size: 0.18, studies: [13, 46, 49] },
+                { source: "sms_reminder", target: "completion_rate", type: "enhance", value: 2.2, effect_size: 0.14, studies: [8, 25, 34, 36] },
+                { source: "direct_fit", target: "completion_rate", type: "enhance", value: 2.0, effect_size: 0.14, studies: [9, 43] },
+                { source: "personalized_edu", target: "knowledge_attitude", type: "enhance", value: 2.4, effect_size: 0.14, studies: [12, 31, 41] },
+                { source: "decision_aid", target: "knowledge_attitude", type: "enhance", value: 2.1, effect_size: 0.12, studies: [31, 41] },
+                { source: "shared_decision", target: "screening_discussion", type: "enhance", value: 2.2, effect_size: 0.12, studies: [11, 39] },
+                { source: "physician_training", target: "screening_discussion", type: "enhance", value: 2.0, effect_size: 0.11, studies: [11, 52] },
+                { source: "patient_navigation", target: "cost_effectiveness", type: "enhance", value: 1.8, effect_size: 0.12, studies: [14, 46] },
+                { source: "sms_reminder", target: "cost_effectiveness", type: "enhance", value: 1.9, effect_size: 0.10, studies: [8, 25] },
+                { source: "sequence_strategy", target: "detection_rate", type: "enhance", value: 1.7, effect_size: 0.08, studies: [7] },
+                { source: "choice_strategy", target: "detection_rate", type: "enhance", value: 1.6, effect_size: 0.08, studies: [7] }
+            ]
+        };
+
+        // 创建力导向图
+        const width = document.getElementById('graph').clientWidth;
+        const height = document.getElementById('graph').clientHeight;
+        
+        // 创建SVG容器
+        const svg = d3.select("#graph")
+            .append("svg")
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .attr("viewBox", [0, 0, width, height])
+            .attr("style", "max-width: 100%; height: auto;");
+        
+        // 添加箭头标记
+        svg.append("defs").selectAll("marker")
+            .data(["enhance", "prerequisite", "appliesTo", "alternative"])
+            .enter().append("marker")
+            .attr("id", d => `arrow-${d}`)
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 23)
+            .attr("refY", 0)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("fill", d => {
+                if (d === "enhance") return "#e41a1c";
+                if (d === "prerequisite") return "#4daf4a";
+                if (d === "appliesTo") return "#377eb8";
+                if (d === "alternative") return "#984ea3";
+                return "#999";
+            })
+            .attr("d", "M0,-5L10,0L0,5");
+        
+        // 创建力导向模拟
+        const simulation = d3.forceSimulation(graphData.nodes)
+            .force("link", d3.forceLink(graphData.links).id(d => d.id).distance(d => 200 / (d.value || 1)))
+            .force("charge", d3.forceManyBody().strength(-400))
+            .force("center", d3.forceCenter(width / 2, height / 2))
+            .force("x", d3.forceX(width / 2).strength(0.1))
+            .force("y", d3.forceY(height / 2).strength(0.1))
+            .force("collision", d3.forceCollide().radius(d => getNodeRadius(d) + 10));
+
+        // 绘制连接线
+        const link = svg.append("g")
+            .attr("class", "links")
+            .selectAll("line")
+            .data(graphData.links)
+            .enter().append("line")
+            .attr("stroke", d => {
+                switch(d.type) {
+                    case "enhance": return "#e41a1c";
+                    case "appliesTo": return "#377eb8";
+                    case "prerequisite": return "#4daf4a";
+                    case "alternative": return "#984ea3";
+                    default: return "#999";
+                }
+            })
+            .attr("stroke-width", d => Math.sqrt(d.value) * 1.5)
+            .attr("stroke-dasharray", d => d.type === "cooccurrence" ? "5,5" : "none")
+            .attr("marker-end", d => {
+                if (d.type === "enhance" || d.type === "prerequisite" || d.type === "appliesTo" || d.type === "alternative") {
+                    return `url(#arrow-${d.type})`;
+                }
+                return "";
+            })
+            .attr("data-type", d => d.type)
+            .attr("data-effect-size", d => d.effect_size || d.synergy || 1.0)
+            .attr("opacity", 0.6);
+
+        // 根据节点类型和重要性获取节点半径
+        function getNodeRadius(d) {
+            if (d.type === "strategy") {
+                // 获取当前选中的中心性指标
+                const centralityMeasure = document.getElementById("centralityMeasure").value;
+                const centralityValue = d[centralityMeasure];
+                
+                // 中心度越高，节点越大
+                return Math.max(8, Math.min(25, 10 + centralityValue / 20));
+            } else {
+                return 10; // 其他类型节点的固定大小
+            }
+        }
+
+        // 获取节点颜色
+        function getNodeColor(d) {
+            if (d.type === "strategy") {
+                switch(d.cluster) {
+                    case "technology": return "#e41a1c";
+                    case "education": return "#377eb8";
+                    case "navigation": return "#4daf4a";
+                    case "clinical": return "#984ea3";
+                    case "community": return "#ff7f00";
+                    case "system": return "#a65628";
+                    default: return "#999";
+                }
+            } else if (d.type === "population") {
+                return "#377eb8";
+            } else if (d.type === "environment") {
+                return "#4daf4a";
+            } else if (d.type === "outcome") {
+                return "#984ea3";
+            }
+            return "#999";
+        }
+
+        // 绘制节点 - 使用不同形状
+        const node = svg.append("g")
+            .attr("class", "nodes")
+            .selectAll("g")
+            .data(graphData.nodes)
+            .enter().append("g")
+            .attr("data-type", d => d.type)
+            .attr("data-cluster", d => d.cluster || "")
+            .call(d3.drag()
+                .on("start", dragstarted)
+                .on("drag", dragged)
+                .on("end", dragended));
+                
+        // 添加圆形（策略节点）
+        node.filter(d => d.type === "strategy")
+            .append("circle")
+            .attr("r", getNodeRadius)
+            .attr("fill", getNodeColor)
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1.5);
+            
+        // 添加方形（其他类型节点）
+        node.filter(d => d.type !== "strategy")
+            .append("rect")
+            .attr("width", d => getNodeRadius(d) * 2)
+            .attr("height", d => getNodeRadius(d) * 2)
+            .attr("x", d => -getNodeRadius(d))
+            .attr("y", d => -getNodeRadius(d))
+            .attr("fill", getNodeColor)
+            .attr("stroke", "#fff")
+            .attr("stroke-width", 1.5);
+
+        // 节点标签
+        const nodeLabels = svg.append("g")
+            .attr("class", "node-labels")
+            .selectAll("text")
+            .data(graphData.nodes)
+            .enter().append("text")
+            .attr("dx", 0)
+            .attr("dy", d => getNodeRadius(d) + 12)
+            .attr("text-anchor", "middle")
+            .text(d => d.name)
+            .attr("font-size", d => {
+                // 核心策略节点文字稍大
+                if (d.type === "strategy" && d.rank <= 5) {
+                    return "11px";
+                }
+                return "9px";
+            })
+            .attr("data-type", d => d.type)
+            .attr("data-cluster", d => d.cluster || "")
+            .style("pointer-events", "none")
+            .style("user-select", "none");
+
+        // 设置鼠标交互事件
+        node.on("mouseover", showTooltip)
+            .on("mouseout", hideTooltip)
+            .on("click", showNodeInfo);
+
+        // 工具提示框
+        const tooltip = d3.select("#tooltip");
+
+        function showTooltip(event, d) {
+            // 淡化其他节点和连接
+            node.style("opacity", n => isConnected(d, n) ? 1 : 0.2);
+            link.style("opacity", l => l.source.id === d.id || l.target.id === d.id ? 0.8 : 0.1);
+            nodeLabels.style("opacity", n => isConnected(d, n) ? 1 : 0.2);
+            
+            // 突出显示相关节点标签
+            nodeLabels.filter(n => n.id === d.id)
+                .attr("font-weight", "bold")
+                .attr("font-size", "12px");
+            
+            // 显示工具提示
+            let html = `<strong>${d.name}</strong><br>`;
+            
+            if (d.type === "strategy") {
+                const centralityMeasure = document.getElementById("centralityMeasure").value;
+                let centralityName = "中心度";
+                if (centralityMeasure === "betweenness") centralityName = "中介中心性";
+                if (centralityMeasure === "eec") centralityName = "证据增强型中心度";
+                
+                html += `类型: 策略节点<br>`;
+                html += `策略簇: ${getClusterName(d.cluster)}<br>`;
+                html += `${centralityName}: ${d[centralityMeasure].toFixed(1)}<br>`;
+                html += `排名: ${d.rank}<br>`;
+                html += `研究数量: ${d.evidence_count}<br>`;
+                html += `平均效应大小: ${d.effect_size.toFixed(2)}`;
+                
+                // 添加参考文献编号
+                if (d.studies && d.studies.length > 0) {
+                    html += `<br>相关文献: ${d.studies.join(", ")}`;
+                }
+            } else if (d.type === "population") {
+                html += `类型: 人群节点<br>`;
+                if (d.adaptability) {
+                    html += `适应性得分: ${d.adaptability.toFixed(2)}<br>`;
+                }
+                html += `研究数量: ${d.evidence_count}`;
+                if (d.studies && d.studies.length > 0) {
+                    html += `<br>相关文献: ${d.studies.join(", ")}`;
+                }
+            } else if (d.type === "environment") {
+                html += `类型: 环境节点<br>`;
+                html += `研究数量: ${d.evidence_count}`;
+                if (d.studies && d.studies.length > 0) {
+                    html += `<br>相关文献: ${d.studies.join(", ")}`;
+                }
+            } else if (d.type === "outcome") {
+                html += `类型: 结局节点<br>`;
+                html += `研究数量: ${d.evidence_count}`;
+                if (d.studies && d.studies.length > 0) {
+                    html += `<br>相关文献: ${d.studies.join(", ")}`;
+                }
+            }
+            
+            tooltip.html(html)
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY - 10) + "px")
+                .style("opacity", 1);
+        }
+
+        function hideTooltip() {
+            // 恢复所有节点和连接的透明度
+            node.style("opacity", 1);
+            link.style("opacity", 0.6);
+            nodeLabels.style("opacity", 1);
+            
+            // 恢复节点标签样式
+            nodeLabels.attr("font-weight", "normal")
+                .attr("font-size", d => {
+                    if (d.type === "strategy" && d.rank <= 5) {
+                        return "11px";
+                    }
+                    return "9px";
+                });
+            
+            // 隐藏工具提示
+            tooltip.style("opacity", 0);
+        }
+
+        function showNodeInfo(event, d) {
+            // 在侧边栏显示节点详细信息
+            const nodeInfo = document.getElementById("nodeInfo");
+            const nodeInfoContent = document.getElementById("nodeInfoContent");
+            
+            let html = `<h3>${d.name}</h3>`;
+            
+            if (d.type === "strategy") {
+                html += `<p><strong>策略类型:</strong> ${getClusterName(d.cluster)}</p>`;
+                
+                // 显示不同中心度指标
+                html += `<p><strong>度中心性:</strong> ${d.degree.toFixed(1)}</p>`;
+                html += `<p><strong>中介中心性:</strong> ${d.betweenness.toFixed(1)}</p>`;
+                html += `<p><strong>证据增强型中心度(EEC):</strong> ${d.eec.toFixed(1)}</p>`;
+                html += `<p><strong>重要性排名:</strong> ${d.rank}</p>`;
+                html += `<p><strong>研究数量:</strong> ${d.evidence_count}</p>`;
+                html += `<p><strong>平均效应大小:</strong> ${d.effect_size.toFixed(2)}</p>`;
+                
+                // 显示参考文献编号
+                if (d.studies && d.studies.length > 0) {
+                    html += `<p><strong>相关文献:</strong> ${d.studies.join(", ")}</p>`;
+                }
+                
+                // 显示与该策略相关的人群
+                const relatedPopulations = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    ((typeof l.source === 'object' && l.source.type === "population") || 
+                     (typeof l.target === 'object' && l.target.type === "population"))
+                );
+                
+                if (relatedPopulations.length > 0) {
+                    html += `<p><strong>适用人群:</strong></p><ul>`;
+                    relatedPopulations.forEach(l => {
+                        const populationNode = (typeof l.source === 'object' && l.source.type === "population") ? l.source : l.target;
+                        html += `<li>${populationNode.name} (效应大小: ${l.effect_size ? l.effect_size.toFixed(2) : "未知"})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+                
+                // 显示与该策略协同效应高的策略
+                const synergyLinks = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    l.synergy && l.synergy > 1.2 &&
+                    ((typeof l.source === 'object' && l.source.type === "strategy") && 
+                     (typeof l.target === 'object' && l.target.type === "strategy"))
+                );
+                
+                if (synergyLinks.length > 0) {
+                    html += `<p><strong>协同效应策略组合:</strong></p><ul>`;
+                    synergyLinks.forEach(l => {
+                        const otherNode = l.source.id === d.id ? l.target : l.source;
+                        html += `<li>${otherNode.name} (协同系数: ${l.synergy.toFixed(2)})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+                
+                // 显示该策略对结局的影响
+                const outcomeLinks = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    ((typeof l.source === 'object' && l.source.type === "outcome") || 
+                     (typeof l.target === 'object' && l.target.type === "outcome"))
+                );
+                
+                if (outcomeLinks.length > 0) {
+                    html += `<p><strong>影响结局:</strong></p><ul>`;
+                    outcomeLinks.forEach(l => {
+                        const outcomeNode = (typeof l.source === 'object' && l.source.type === "outcome") ? l.source : l.target;
+                        html += `<li>${outcomeNode.name} (效应大小: ${l.effect_size ? l.effect_size.toFixed(2) : "未知"})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            } else if (d.type === "population") {
+                html += `<p><strong>节点类型:</strong> 人群特征</p>`;
+                
+                if (d.adaptability) {
+                    html += `<p><strong>适应性得分:</strong> ${d.adaptability.toFixed(2)}</p>`;
+                }
+                
+                html += `<p><strong>研究数量:</strong> ${d.evidence_count}</p>`;
+                
+                // 显示参考文献编号
+                if (d.studies && d.studies.length > 0) {
+                    html += `<p><strong>相关文献:</strong> ${d.studies.join(", ")}</p>`;
+                }
+                
+                // 显示适用于该人群的策略
+                const relatedStrategies = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    ((typeof l.source === 'object' && l.source.type === "strategy") || 
+                     (typeof l.target === 'object' && l.target.type === "strategy"))
+                );
+                
+                if (relatedStrategies.length > 0) {
+                    html += `<p><strong>适用策略:</strong></p><ul>`;
+                    relatedStrategies.sort((a, b) => {
+                        const strategyA = (typeof a.source === 'object' && a.source.type === "strategy") ? a.source : a.target;
+                        const strategyB = (typeof b.source === 'object' && b.source.type === "strategy") ? b.source : b.target;
+                        return strategyA.rank - strategyB.rank;
+                    }).forEach(l => {
+                        const strategyNode = (typeof l.source === 'object' && l.source.type === "strategy") ? l.source : l.target;
+                        html += `<li>${strategyNode.name} (效应大小: ${l.effect_size ? l.effect_size.toFixed(2) : "未知"})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            } else if (d.type === "environment") {
+                html += `<p><strong>节点类型:</strong> 实施环境</p>`;
+                html += `<p><strong>研究数量:</strong> ${d.evidence_count}</p>`;
+                
+                // 显示参考文献编号
+                if (d.studies && d.studies.length > 0) {
+                    html += `<p><strong>相关文献:</strong> ${d.studies.join(", ")}</p>`;
+                }
+                
+                // 显示适用于该环境的策略
+                const relatedStrategies = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    ((typeof l.source === 'object' && l.source.type === "strategy") || 
+                     (typeof l.target === 'object' && l.target.type === "strategy"))
+                );
+                
+                if (relatedStrategies.length > 0) {
+                    html += `<p><strong>推荐策略:</strong></p><ul>`;
+                    relatedStrategies.sort((a, b) => {
+                        const strategyA = (typeof a.source === 'object' && a.source.type === "strategy") ? a.source : a.target;
+                        const strategyB = (typeof b.source === 'object' && b.source.type === "strategy") ? b.source : b.target;
+                        return strategyA.rank - strategyB.rank;
+                    }).forEach(l => {
+                        const strategyNode = (typeof l.source === 'object' && l.source.type === "strategy") ? l.source : l.target;
+                        html += `<li>${strategyNode.name} (效应大小: ${l.effect_size ? l.effect_size.toFixed(2) : "未知"})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            } else if (d.type === "outcome") {
+                html += `<p><strong>节点类型:</strong> 结局指标</p>`;
+                html += `<p><strong>研究数量:</strong> ${d.evidence_count}</p>`;
+                
+                // 显示参考文献编号
+                if (d.studies && d.studies.length > 0) {
+                    html += `<p><strong>相关文献:</strong> ${d.studies.join(", ")}</p>`;
+                }
+                
+                // 显示影响该结局的策略
+                const relatedStrategies = graphData.links.filter(l => 
+                    (l.source.id === d.id || l.target.id === d.id) && 
+                    ((typeof l.source === 'object' && l.source.type === "strategy") || 
+                     (typeof l.target === 'object' && l.target.type === "strategy"))
+                );
+                
+                if (relatedStrategies.length > 0) {
+                    html += `<p><strong>影响策略:</strong></p><ul>`;
+                    relatedStrategies.sort((a, b) => {
+                        const strategyA = (typeof a.source === 'object' && a.source.type === "strategy") ? a.source : a.target;
+                        const strategyB = (typeof b.source === 'object' && b.source.type === "strategy") ? b.source : b.target;
+                        return strategyA.rank - strategyB.rank;
+                    }).forEach(l => {
+                        const strategyNode = (typeof l.source === 'object' && l.source.type === "strategy") ? l.source : l.target;
+                        html += `<li>${strategyNode.name} (效应大小: ${l.effect_size ? l.effect_size.toFixed(2) : "未知"})</li>`;
+                    });
+                    html += `</ul>`;
+                }
+            }
+            
+            nodeInfoContent.innerHTML = html;
+            nodeInfo.style.display = "block";
+        }
+
+        // 检查两个节点是否相连
+        function isConnected(a, b) {
+            if (a.id === b.id) return true;
+            return graphData.links.some(l => 
+                (l.source.id === a.id && l.target.id === b.id) || 
+                (l.source.id === b.id && l.target.id === a.id)
+            );
+        }
+        
+        // 获取策略簇的中文名
+        function getClusterName(cluster) {
+            switch(cluster) {
+                case "technology": return "技术驱动策略簇";
+                case "education": return "教育赋能策略簇";
+                case "navigation": return "导航支持策略簇";
+                case "clinical": return "临床干预策略簇";
+                case "community": return "社区参与策略簇";
+                case "system": return "系统优化策略簇";
+                default: return cluster;
+            }
+        }
+
+        // 更新节点大小和颜色的函数
+        function updateNodes() {
+            // 获取当前选择的中心性指标
+            const centralityMeasure = document.getElementById("centralityMeasure").value;
+            
+            // 更新节点大小
+            node.selectAll("circle")
+                .attr("r", d => {
+                    const value = d[centralityMeasure] || 0;
+                    return Math.max(8, Math.min(25, 10 + value / 20));
+                });
+                
+            node.selectAll("rect")
+                .attr("width", d => getNodeRadius(d) * 2)
+                .attr("height", d => getNodeRadius(d) * 2)
+                .attr("x", d => -getNodeRadius(d))
+                .attr("y", d => -getNodeRadius(d));
+        }
+
+        // 中心度指标选择改变事件
+        document.getElementById("centralityMeasure").addEventListener("change", updateNodes);
+
+        // 力导向图更新函数
+        simulation.on("tick", () => {
+            link
+                .attr("x1", d => d.source.x)
+                .attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x)
+                .attr("y2", d => d.target.y);
+
+            // 更新节点组的位置
+            node.attr("transform", d => {
+                d.x = Math.max(getNodeRadius(d), Math.min(width - getNodeRadius(d), d.x));
+                d.y = Math.max(getNodeRadius(d), Math.min(height - getNodeRadius(d), d.y));
+                return `translate(${d.x},${d.y})`;
+            });
+                
+            nodeLabels
+                .attr("x", d => d.x)
+                .attr("y", d => d.y);
+        });
+
+        // 拖拽功能
+        function dragstarted(event, d) {
+            if (!event.active) simulation.alphaTarget(0.3).restart();
+            d.fx = d.x;
+            d.fy = d.y;
+        }
+
+        function dragged(event, d) {
+            d.fx = event.x;
+            d.fy = event.y;
+        }
+
+        function dragended(event, d) {
+            if (!event.active) simulation.alphaTarget(0);
+            d.fx = null;
+            d.fy = null;
+        }
+
+        // 搜索功能
+        document.getElementById("searchBox").addEventListener("input", function() {
+            const searchTerm = this.value.toLowerCase();
+            
+            if (searchTerm === "") {
+                node.style("stroke", "#fff").style("stroke-width", 1.5);
+                return;
+            }
+            
+            node.each(function(d) {
+                const element = d3.select(this);
+                if (d.name.toLowerCase().includes(searchTerm)) {
+                    element.style("stroke", "#ff0")
+                           .style("stroke-width", 3);
+                } else {
+                    element.style("stroke", "#fff")
+                           .style("stroke-width", 1.5);
+                }
+            });
+        });
+
+        // 应用过滤器
+        document.getElementById("applyFilters").addEventListener("click", applyFilters);
+        document.getElementById("resetFilters").addEventListener("click", resetFilters);
+        document.getElementById("findOptimalPath").addEventListener("click", findOptimalPath);
+
+        // 查找最优策略组合路径函数
+        function findOptimalPath() {
+            // 重置所有高亮
+            link.classed("highlighted-path", false);
+            
+            // 获取当前选择的中心性指标
+            const centralityMeasure = document.getElementById("centralityMeasure").value;
+            
+            // 找出得分最高的技术驱动策略和其他几个簇的策略
+            const topTechStrategy = graphData.nodes
+                .filter(n => n.type === "strategy" && n.cluster === "technology")
+                .sort((a, b) => b[centralityMeasure] - a[centralityMeasure])[0];
+                
+            const topNavStrategy = graphData.nodes
+                .filter(n => n.type === "strategy" && n.cluster === "navigation")
+                .sort((a, b) => b[centralityMeasure] - a[centralityMeasure])[0];
+                
+            const topEduStrategy = graphData.nodes
+                .filter(n => n.type === "strategy" && n.cluster === "education")
+                .sort((a, b) => b[centralityMeasure] - a[centralityMeasure])[0];
+                
+            // 找出这些策略之间的协同关系强的链接
+            const pathLinks = graphData.links.filter(l => 
+                ((l.source.id === topTechStrategy.id && l.target.id === topNavStrategy.id) ||
+                 (l.source.id === topNavStrategy.id && l.target.id === topTechStrategy.id) ||
+                 (l.source.id === topTechStrategy.id && l.target.id === topEduStrategy.id) ||
+                 (l.source.id === topEduStrategy.id && l.target.id === topTechStrategy.id) ||
+                 (l.source.id === topNavStrategy.id && l.target.id === topEduStrategy.id) ||
+                 (l.source.id === topEduStrategy.id && l.target.id === topNavStrategy.id))
+            );
+            
+            // 高亮这些链接
+            link.filter(l => pathLinks.includes(l))
+                .classed("highlighted-path", true);
+                
+            // 显示最优路径信息
+            const nodeInfo = document.getElementById("nodeInfo");
+            const nodeInfoContent = document.getElementById("nodeInfoContent");
+            
+            let html = `<h3>最优策略组合路径</h3>`;
+            html += `<p>基于当前选择的 ${centralityMeasure === "degree" ? "度中心性" : centralityMeasure === "betweenness" ? "中介中心性" : "证据增强型中心度"} 指标，以下组合具有最佳协同效应:</p>`;
+            html += `<ul>`;
+            html += `<li><strong>${topTechStrategy.name}</strong> (${getClusterName(topTechStrategy.cluster)})</li>`;
+            html += `<li><strong>${topNavStrategy.name}</strong> (${getClusterName(topNavStrategy.cluster)})</li>`;
+            html += `<li><strong>${topEduStrategy.name}</strong> (${getClusterName(topEduStrategy.cluster)})</li>`;
+            html += `</ul>`;
+            
+            // 计算组合的总效应
+            let totalEffect = (topTechStrategy.effect_size + topNavStrategy.effect_size + topEduStrategy.effect_size);
+            let synergyBoost = 1.0;
+            
+            pathLinks.forEach(l => {
+                if (l.synergy) {
+                    synergyBoost *= l.synergy;
+                }
+            });
+            
+            totalEffect *= synergyBoost;
+            
+            html += `<p>这一策略组合的估计总效应大小: <strong>${totalEffect.toFixed(2)}</strong></p>`;
+            html += `<p>协同增益系数: <strong>${synergyBoost.toFixed(2)}</strong></p>`;
+            
+            nodeInfoContent.innerHTML = html;
+            nodeInfo.style.display = "block";
+        }
+
+        function applyFilters() {
+            // 获取选中的节点类型
+            const nodeTypeFilter = Array.from(document.getElementById("nodeTypeFilter").selectedOptions)
+                .map(option => option.value);
+            
+            // 获取选中的策略簇
+            const clusterFilter = Array.from(document.getElementById("clusterFilter").selectedOptions)
+                .map(option => option.value);
+            
+            // 获取选中的关系类型
+            const relationFilter = Array.from(document.getElementById("relationFilter").selectedOptions)
+                .map(option => option.value);
+                
+            // 获取效应大小过滤器
+            const effectSizeFilter = document.getElementById("effectSizeFilter").value;
+            
+            // 过滤节点
+            node.style("display", d => {
+                if (!nodeTypeFilter.includes(d.type)) return "none";
+                if (d.type === "strategy" && !clusterFilter.includes(d.cluster)) return "none";
+                return null;
+            });
+            
+            nodeLabels.style("display", d => {
+                if (!nodeTypeFilter.includes(d.type)) return "none";
+                if (d.type === "strategy" && !clusterFilter.includes(d.cluster)) return "none";
+                return null;
+            });
+            
+            // 过滤连接线
+            link.style("display", d => {
+                // 如果连接的任一节点不可见，则隐藏连接
+                if (node.filter(n => n.id === d.source.id).style("display") === "none") return "none";
+                if (node.filter(n => n.id === d.target.id).style("display") === "none") return "none";
+                
+                // 过滤关系类型
+                if (!relationFilter.includes(d.type)) return "none";
+                
+                // 过滤效应大小
+                if (effectSizeFilter === "significant" && (!d.effect_size || d.effect_size < 0.05) && (!d.synergy || d.synergy < 1.05)) return "none";
+                if (effectSizeFilter === "strong" && (!d.effect_size || d.effect_size < 0.10) && (!d.synergy || d.synergy < 1.20)) return "none";
+                
+                return null;
+            });
+            
+            // 重启力导向模拟以调整布局
+            simulation.alpha(0.3).restart();
+        }
+
+        function resetFilters() {
+            // 重置选择框
+            document.getElementById("nodeTypeFilter").querySelectorAll("option").forEach(option => {
+                option.selected = true;
+            });
+            
+            document.getElementById("clusterFilter").querySelectorAll("option").forEach(option => {
+                option.selected = true;
+            });
+            
+            document.getElementById("relationFilter").querySelectorAll("option").forEach(option => {
+                option.selected = true;
+            });
+            
+            document.getElementById("effectSizeFilter").value = "all";
+            
+            // 显示所有节点和连接
+            node.style("display", null);
+            nodeLabels.style("display", null);
+            link.style("display", null);
+            
+            // 重启力导向模拟
+            simulation.alpha(0.3).restart();
+        }
+    </script>
+</body>
+</html>
